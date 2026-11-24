@@ -151,7 +151,7 @@ body.inGame #muteBtn{top:60px;left:auto;right:12px;padding:6px 10px;font-size:15
     <h3 style="margin:4px 0">🏐 어떤 게임이에요?</h3>
     <p style="margin:4px 0 12px">4명씩 두 팀으로 나눠 공을 던져 상대를 맞히는 피구 게임이에요. 상대 팀을 모두 아웃시키거나, 시간이 끝났을 때 남은 하트가 더 많은 팀이 이겨요.</p>
     <h3 style="margin:4px 0">🎮 조작법</h3>
-    <ul style="margin:4px 0 12px;padding-left:22px"><li><b>이동</b>: 왼쪽 아래 조이스틱</li><li><b>던지기</b>: 버튼을 누르고 있으면 파워 게이지가 차요. 노란 칸에서 손을 떼면 불꽃이 활활 타는 <b>불꽃 슛</b>, 보라 칸이면 아주 빠르고 잡기 힘든 <b>블랙홀 슛</b>!</li><li><b>패스</b>: 우리 편에게 공을 넘겨요</li><li><b>잡기</b>: 공이 나에게 오는 순간 누르면 잡아요 (타이밍이 중요해요)</li><li><b>구르기</b>: 공이 몸에 닿기 직전(0.15초 안)에 딱 맞춰 구르면 <b>블랙홀 슛까지</b> 피할 수 있어요. 너무 일찍 구르면 맞아요!</li></ul>
+    <ul style="margin:4px 0 12px;padding-left:22px"><li><b>⌨️ 키보드</b>: 이동은 <b>화살표</b>, 던지기·잡기는 <b>A</b>, 구르기는 <b>S</b>, 패스는 <b>D</b></li><li><b>이동</b>: 왼쪽 아래 조이스틱</li><li><b>던지기</b>: 버튼을 누르고 있으면 파워 게이지가 차요. 노란 칸에서 손을 떼면 불꽃이 활활 타는 <b>불꽃 슛</b>, 보라 칸이면 아주 빠르고 잡기 힘든 <b>블랙홀 슛</b>!</li><li><b>패스</b>: 우리 편에게 공을 넘겨요</li><li><b>잡기</b>: 공이 나에게 오는 순간 누르면 잡아요 (타이밍이 중요해요)</li><li><b>구르기</b>: 공이 몸에 닿기 직전(0.15초 안)에 딱 맞춰 구르면 <b>블랙홀 슛까지</b> 피할 수 있어요. 너무 일찍 구르면 맞아요!</li></ul>
     <h3 style="margin:4px 0">📏 규칙</h3>
     <ul style="margin:4px 0 12px;padding-left:22px"><li>공은 <b>5초</b> 안에 던져야 해요. 시간이 지나면 상대 공이 돼요.</li><li>공에 맞으면 하트가 1개 줄고, 하트가 0이 되면 <b>수비수</b>가 돼서 상대 코트 바깥에서 공을 던질 수 있어요.</li><li>코트에 떨어진 공은 그 코트 팀의 공이 돼요.</li></ul>
     <h3 style="margin:4px 0">⭐ 포인트와 상점</h3>
@@ -3100,8 +3100,19 @@ function updateBot(p, dt) {
 /* ================= INPUT ================= */
 const keys = {};
 const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
-addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (!G || !G.running) return; const k = e.key.toLowerCase(); if (k === ' ' || k === 'j') { mainAction(); e.preventDefault(); } if (k === 'k') rollAction(); if (k === 'l') passAction(); });
-addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+// 키보드: 이동 = 화살표, 던지기/잡기 = A, 구르기 = S, 패스 = D
+// e.code를 써서 한글 입력 상태(ㅁ/ㄴ/ㅇ)에서도 똑같이 동작해요
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (!G || !G.running) return;
+  if (e.code.startsWith('Arrow')) e.preventDefault();
+  if (e.repeat) return;
+  if (e.code === 'KeyA') { mainAction(); e.preventDefault(); }
+  else if (e.code === 'KeyS') { rollAction(); e.preventDefault(); }
+  else if (e.code === 'KeyD') { passAction(); e.preventDefault(); }
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 const jz = $('joyZone'), jb = $('joyBase'), jk = $('joyKnob');
 function placeJoy() { const zr = jz.getBoundingClientRect(); joy.cx = 120; joy.cy = zr.height - 120; jb.style.left = joy.cx + 'px'; jb.style.top = joy.cy + 'px'; }
 function joyMove(e) { const zr = jz.getBoundingClientRect(); let dx = e.clientX - zr.left - joy.cx, dy = e.clientY - zr.top - joy.cy; const l = Math.hypot(dx, dy), m = 58; if (l > m) { dx *= m / l; dy *= m / l; } joy.x = dx / m; joy.y = dy / m; if (Math.hypot(joy.x, joy.y) < .15) joy.x = joy.y = 0; jk.style.transform = `translate(${dx}px,${dy}px)`; }
@@ -3164,8 +3175,8 @@ function updatePlayers(dt) {
   const me = G.me;
   // human input
   let ix = joy.x, iz = joy.y;
-  if (keys['arrowleft'] || keys['a']) ix -= 1; if (keys['arrowright'] || keys['d']) ix += 1;
-  if (keys['arrowup'] || keys['w']) iz -= 1; if (keys['arrowdown'] || keys['s']) iz += 1;
+  if (keys['ArrowLeft']) ix -= 1; if (keys['ArrowRight']) ix += 1;
+  if (keys['ArrowUp']) iz -= 1; if (keys['ArrowDown']) iz += 1;
   const il = Math.hypot(ix, iz); if (il > 1) { ix /= il; iz /= il; }
   const msp = (me.boost > 0 ? 7 : 5) * (me.slow || 1) * (me.speedMul || 1); me.vel.set(ix * msp, 0, iz * msp);
   if (G.ball.mode === 'held' && G.ball.holder === me) { const t = nearestEnemyInner(me); if (t && il < .1) me.face = Math.atan2(t.pos.x - me.pos.x, t.pos.z - me.pos.z); }
